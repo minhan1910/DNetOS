@@ -1,6 +1,7 @@
 [ORG 0]
 [BITS 16]
 
+; For booting of real computer and we need to setup BPL (BIOS Parameter Block) for the bootloader, but for the sake of simplicity, we will skip that part and directly jump to the code.
 _start:
     jmp short start
     nop
@@ -21,7 +22,22 @@ step2:
     mov sp, 0x7c00
     sti
 
-    mov si, message
+    mov ah, 2 ; read section command
+    mov al, 1 ; number of sectors to read
+    mov ch, 0 ; cylinder number
+    mov cl, 2 ; sector number (starting from 1)
+    mov dh, 0 ; head number
+    mov bx, buffer ; buffer to store the read data
+    int 0x13 ; call BIOS interrupt to read sector
+    jc load_error ; if carry flag is set, there was an error
+
+    mov si, buffer
+    call print
+
+    jmp $
+
+load_error:
+    mov si, error_message
     call print
     jmp $
 
@@ -40,8 +56,10 @@ print_char:
     int 0x10
     ret
 
-message: db 'Hello, World!', 0
+error_message: db 'Failed to load sector!', 0
     
 times 510 - ($ - $$) db 0
 
 dw 0xAA55
+
+buffer:
