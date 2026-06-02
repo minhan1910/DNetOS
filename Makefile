@@ -1,7 +1,24 @@
-all:
-	nasm -f bin ./boot.asm -o boot.bin
-	dd if=./message.txt >> ./boot.bin
-	dd if=/dev/zero bs=512 count=1 >> ./boot.bin
+NASM = nasm
+QEMU = qemu-system-i386
 
-run: 
-	qemu-system-x86_64 -drive format=raw,file=boot.bin
+BOOT_SRC = src/boot/boot.asm
+BOOT_BIN = bin/boot.bin
+
+all: $(BOOT_BIN)
+
+$(BOOT_BIN): $(BOOT_SRC) src/graphics.asm
+	$(NASM) -f bin $(BOOT_SRC) -o $(BOOT_BIN) -i src/
+
+clean:
+	rm -rf bin/*
+
+debug: $(BOOT_BIN)
+	$(QEMU) -drive file=$(BOOT_BIN),format=raw,if=floppy \
+	        -s -S
+
+run: $(BOOT_BIN)
+	$(QEMU) -drive file=$(BOOT_BIN),format=raw,if=floppy \
+			-monitor stdio \
+	        -no-reboot
+
+.PHONY: all run clean
